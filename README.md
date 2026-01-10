@@ -1,4 +1,4 @@
-# Mental-health-app
+
 
 ## Nuvio AI – Smart Therapy Assistant
 
@@ -22,15 +22,15 @@ This project is developed as part of the course **Software Engineering – Softw
 ## System Architecture
 The system follows a layered architecture:
 
-SwiftUI iOS App
-↓
-ViewModels (MVVM)
-↓
-Domain Logic and Repository
-↓
-Backend API (FastAPI) and AI Engine
-↓
-Firebase Services
+            SwiftUI iOS App
+                ↓
+          ViewModels (MVVM)
+                ↓
+      Domain Logic and Repository
+                ↓
+    Backend API (FastAPI) and AI Engine
+                ↓
+        Firebase Services
 
 ### Architecture Documentation
 - docs/SRS.pdf
@@ -124,18 +124,20 @@ These limitations are explicitly documented in the SRS.
 3. Run on simulator or physical device
 
 ### Backend API
-```bash
-cd backend-api
-pip install -r requirements.txt
-uvicorn app.main:app --reload
-AI Engine
-cd ai-engine
-pip install -r requirements.txt
-python inference/predict.py
-Team Members
+    cd backend-api
+    pip install -r requirements.txt
+    uvicorn app.main:app --reload
+### Ai Engine  
+    cd ai-engine
+    pip install -r requirements.txt
+    python inference/predict.py
+
+##Team Members
+
 Can Sar
 Elif Kanık
 Berkay Aydın
 Mert Doruk Özdemir
-License
+
+##License
 This project was developed for academic purposes as part of a university course.
