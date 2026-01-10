@@ -22,6 +22,7 @@ This project is developed as part of the course **Software Engineering – Softw
 ## System Architecture
 The system follows a layered architecture:
 
+
             SwiftUI iOS App
                 ↓
           ViewModels (MVVM)
@@ -31,6 +32,7 @@ The system follows a layered architecture:
     Backend API (FastAPI) and AI Engine
                 ↓
         Firebase Services
+
 
 ### Architecture Documentation
 - docs/SRS.pdf
@@ -132,12 +134,12 @@ These limitations are explicitly documented in the SRS.
     pip install -r requirements.txt
     python inference/predict.py
 
-##Team Members
+###Team Members
 
 Can Sar
 Elif Kanık
 Berkay Aydın
 Mert Doruk Özdemir
 
-##License
+###License
 This project was developed for academic purposes as part of a university course.
