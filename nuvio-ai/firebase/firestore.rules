@@ -1,2 +1,35 @@
 rules_version = '2';
-service cloud.firestore { match /databases/{database}/documents { } }
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Allow anyone to read/write if authenticated
+    // Restrict by document ownership
+
+    // Users collection - own document only
+    match /users/{userId} {
+      allow read, write: if request.auth.uid == userId;
+      
+      match /assessments/{assessmentId} {
+        allow read, write: if request.auth.uid == userId;
+      }
+      
+      match /mood_entries/{entryId} {
+        allow read, write: if request.auth.uid == userId;
+      }
+      
+      match /chat_history/{chatId} {
+        allow read, write: if request.auth.uid == userId;
+      }
+      
+      match /reports/{reportId} {
+        allow read, write: if request.auth.uid == userId;
+      }
+    }
+
+    // Deny all other access
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -1,2 +1,23 @@
 rules_version = '2';
-service firebase.storage { match /b/{bucket}/o { } }
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    
+    // User exports and reports - own files only
+    match /users/{userId}/{allPaths=**} {
+      allow read, write: if request.auth.uid == userId
+        && request.resource.size < 10 * 1024 * 1024;  // Max 10MB
+    }
+
+    // Temporary uploads - own folder only
+    match /uploads/{userId}/{allPaths=**} {
+      allow read, write: if request.auth.uid == userId
+        && request.resource.size < 5 * 1024 * 1024;   // Max 5MB
+    }
+
+    // Deny all other access
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
