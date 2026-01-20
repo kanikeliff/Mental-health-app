@@ -1,3 +1,4 @@
+from app.firebase_admin_box import firestore_bag
 from fastapi import FastAPI
 
 # I keep imports separate so it's obvious what my "API layer" is.
@@ -47,3 +48,20 @@ def build_backend_app() -> FastAPI:
 # Uvicorn expects the variable name "app" when we run: uvicorn app.main:app
 # So I expose the built FastAPI instance as "app" here.
 app = build_backend_app()
+
+@app.get("/firebase/ping")
+def firebase_ping():
+    # I use this endpoint to prove my backend can talk to Firestore using Admin SDK
+    db = firestore_bag()
+
+    # I write a tiny debug doc so I can confirm it appears in Firebase console
+    ref = db.collection("_backend_smoke_tests").document("hello-from-berkay")
+    ref.set(
+        {
+            "msg": "If you see this, my backend can write to Firestore ✅",
+            "where": "codespaces",
+        }
+    )
+
+    snap = ref.get()
+    return {"ok": True, "wrote_doc": snap.to_dict()}
