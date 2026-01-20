@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 
 from fastapi import APIRouter, Header, HTTPException
 from app.services.firebase_service import firestore_db, verify_firebase_bearer
-from app.services.ai_service import cook_assistant_reply
+from app.services.ai_service import generate_chat_reply
 from app.models.chat import ChatIn, ChatOut
 
 router = APIRouter(prefix="/chat", tags=["chat"])
@@ -40,8 +40,19 @@ async def chat(payload: ChatIn, authorization: str = Header(default="")):
         "metadata": {}
     })
 
-    # 5) AI reply (fallback today)
-    assistant_text, meta = cook_assistant_reply(payload.userText)
+    result = generate_chat_reply(
+        user_id=uid,
+        user_text=payload.userText,
+    )
+
+    assistant_text = result["assistant_reply"]
+    meta = {
+        "safety": result.get("safety"),
+        "tags": result.get("tags", []),
+        "tone": result.get("tone"),
+        "follow_up_questions": result.get("follow_up_questions", []),
+        "debug": result.get("debug"),
+    }
 
     # 6) Save assistant message
     bot_id = str(uuid.uuid4())
