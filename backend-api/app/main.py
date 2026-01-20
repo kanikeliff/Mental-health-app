@@ -1,7 +1,7 @@
 from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
 
 # I keep imports separate so it's obvious what my "API layer" is.
+# Each router is a mini-module: it owns its endpoints and request/response models.
 from app.api.chat import router as chat_router
 from app.api.mood import router as mood_router
 from app.api.report import router as report_router
@@ -9,36 +9,41 @@ from app.api.assessments import router as assessments_router
 from app.api.ai import router as ai_router
 
 
-def build_nuvio_app() -> FastAPI:
-    # I wrap app creation into a function so tests can import it easily.
-    api = FastAPI(
+def build_backend_app() -> FastAPI:
+    # I created this FastAPI app object because this is the main entry point of my backend.
+    # Uvicorn will look for "app" in app.main:app, so naming matters here.
+    core_api = FastAPI(
         title="Nuvio Backend API",
         version="0.1.0",
     )
 
-    # I enable CORS mainly for quick web testing.
-    # iOS usually doesn't need this, but it never hurts for demo environments.
-    api.add_middleware(
-        CORSMiddleware,
-        allow_origins=["*"],
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
-    )
+    # I register routers here so endpoints are organized by feature/module.
+    # This makes it easier to demo and also easier to maintain later.
+    core_api.include_router(chat_router)
+    core_api.include_router(mood_router)
+    core_api.include_router(report_router)
+    core_api.include_router(assessments_router)
+    core_api.include_router(ai_router)
 
-    # I register routers here, so endpoints are organized by module.
-    api.include_router(chat_router)
-    api.include_router(mood_router)
-    api.include_router(report_router)
-    api.include_router(assessments_router)
-    api.include_router(ai_router)
+    # I added this root endpoint because when I paste the base URL in a browser,
+    # I don't want to see a 404 and panic. This is just my quick sanity check.
+    @core_api.get("/")
+    def home_ping():
+        return {
+            "ok": True,
+            "note": "Backend is alive. I added this so the browser doesn't show 404.",
+        }
 
-    @api.get("/health")
-    def health():
-        # I keep this endpoint public for Render health checks.
-        return {"ok": True, "service": "nuvio-backend"}
+    # I keep a /health endpoint because hosting platforms (Render etc.)
+    # usually use something like this to check if the service is running.
+    @core_api.get("/health")
+    def health_probe():
+        return {"ok": True, "service": "backend-api"}
 
-    return api
+    return core_api
 
 
-app = build_nuvio_app()
+# IMPORTANT:
+# Uvicorn expects the variable name "app" when we run: uvicorn app.main:app
+# So I expose the built FastAPI instance as "app" here.
+app = build_backend_app()

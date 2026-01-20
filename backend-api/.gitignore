@@ -1,0 +1,8 @@
+# I never commit secret keys. If this file leaks, Firebase is basically open season.
+secrets/
+
+# I keep env files local because they contain API keys / config
+.env
+
+# I ignore venv because it's local and massive
+.venv/
