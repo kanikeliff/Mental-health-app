@@ -1,17 +1,16 @@
-import json
-import firebase_admin
-from firebase_admin import credentials, firestore, auth as fb_auth
-from pydantic_settings import BaseSettings
-import os
+from __future__ import annotations
 
-def verify_firebase_bearer(authorization: str) -> str:
-    if os.getenv("DEV_BYPASS_AUTH", "").lower() in ("1", "true", "yes"):
-        return "dev-user"
-    # normal verify devam...
+import json
+import os
+from typing import Optional
+
+import firebase_admin
+from firebase_admin import auth as fb_auth
+from firebase_admin import credentials, firestore
+from pydantic_settings import BaseSettings
 
 
 # I keep config inside this file to avoid scattering env reads everywhere.
-# If you already have a config file somewhere else, we can move it later.
 class _Env(BaseSettings):
     FIREBASE_PROJECT_ID: str
     FIREBASE_SERVICE_ACCOUNT_JSON: str
@@ -24,7 +23,35 @@ class _Env(BaseSettings):
 
 _env = _Env()
 
-_db_cache = None
+_db_cache: Optional[firestore.Client] = None
+
+
+def _load_service_account_cred() -> credentials.Certificate:
+    """
+    FIREBASE_SERVICE_ACCOUNT_JSON can be either:
+    - a JSON string (Render-friendly), OR
+    - a file path like ./secrets/firebase-admin.json (Codespaces-friendly)
+    """
+    raw = (_env.FIREBASE_SERVICE_ACCOUNT_JSON or "").strip()
+    if not raw:
+        raise ValueError("FIREBASE_SERVICE_ACCOUNT_JSON is empty")
+
+    # 1) If it looks like JSON, parse it
+    if raw.startswith("{"):
+        data = json.loads(raw)
+        return credentials.Certificate(data)
+
+    # 2) Otherwise treat as file path
+    path = raw
+    if not os.path.isabs(path):
+        # Make relative paths relative to backend-api root (where .env lives)
+        # In Codespaces you usually run from backend-api, so this is fine.
+        path = os.path.join(os.getcwd(), path)
+
+    if not os.path.exists(path):
+        raise FileNotFoundError(f"Service account file not found: {path}")
+
+    return credentials.Certificate(path)
 
 
 def firestore_db():
@@ -39,11 +66,7 @@ def firestore_db():
 
     # Firebase Admin should init once per process.
     if not firebase_admin._apps:
-        # I store service account JSON in env var (Render-friendly).
-        sa = json.loads(_env.FIREBASE_SERVICE_ACCOUNT_JSON)
-        cred = credentials.Certificate(sa)
-
-        # I set projectId explicitly so I don't accidentally hit the wrong project.
+        cred = _load_service_account_cred()
         firebase_admin.initialize_app(cred, {"projectId": _env.FIREBASE_PROJECT_ID})
 
     _db_cache = firestore.client()
@@ -56,6 +79,11 @@ def verify_firebase_bearer(auth_header: str) -> str:
     Important: I never trust uid coming from request body,
     only from a verified token.
     """
+
+    # ✅ DEV BYPASS (local testing)
+    if os.getenv("DEV_BYPASS_AUTH", "").lower() in ("1", "true", "yes"):
+        return os.getenv("DEV_BYPASS_UID", "dev-user")
+
     if not auth_header or not auth_header.startswith("Bearer "):
         raise ValueError("Missing Bearer token")
 
@@ -71,5 +99,4 @@ def verify_firebase_bearer(auth_header: str) -> str:
 
 
 def env_timezone() -> str:
-    # I expose this so other modules can reuse the timezone config.
     return _env.DEFAULT_TZ
