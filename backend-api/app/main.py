@@ -6,6 +6,7 @@ from app.api.chat import router as chat_router
 from app.api.mood import router as mood_router
 from app.api.report import router as report_router
 from app.api.assessments import router as assessments_router
+from app.api.ai import router as ai_router
 
 
 def build_nuvio_app() -> FastAPI:
@@ -30,6 +31,7 @@ def build_nuvio_app() -> FastAPI:
     api.include_router(mood_router)
     api.include_router(report_router)
     api.include_router(assessments_router)
+    api.include_router(ai_router)
 
     @api.get("/health")
     def health():
