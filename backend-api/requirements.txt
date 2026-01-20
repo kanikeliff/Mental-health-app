@@ -1,8 +1,15 @@
 fastapi==0.115.0
 uvicorn[standard]==0.30.6
+
+# I use this to read env vars cleanly, especially on Render
 pydantic-settings==2.5.2
+
+# local convenience: read .env without exporting everything manually
 python-dotenv==1.0.1
 
-# Firebase Admin SDK (this is what lets my backend talk to Firestore as an admin)
+# Firebase Admin SDK: backend reads/writes Firestore securely (service account)
 firebase-admin==6.5.0
 google-cloud-firestore==2.16.1
+
+# I might call AI engine via HTTP later, so I add this now and decide later on
+httpx==0.27.0
