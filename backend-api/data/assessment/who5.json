@@ -1,0 +1,12 @@
+{
+  "name": "who5",
+  "title": "WHO-5 Well-Being Index",
+  "scale": { "min": 0, "max": 5, "labels": ["At no time", "Some of the time", "Less than half", "More than half", "Most of the time", "All of the time"] },
+  "questions": [
+    { "id": "who5_q1", "text": "I have felt cheerful and in good spirits." },
+    { "id": "who5_q2", "text": "I have felt calm and relaxed." },
+    { "id": "who5_q3", "text": "I have felt active and vigorous." },
+    { "id": "who5_q4", "text": "I woke up feeling fresh and rested." },
+    { "id": "who5_q5", "text": "My daily life has been filled with things that interest me." }
+  ]
+}

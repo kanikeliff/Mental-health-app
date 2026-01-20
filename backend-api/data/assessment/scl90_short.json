@@ -1,0 +1,17 @@
+{
+  "name": "scl90_short",
+  "title": "SCL-90 (Short Demo)",
+  "scale": { "min": 0, "max": 4, "labels": ["Not at all", "A little bit", "Moderately", "Quite a bit", "Extremely"] },
+  "questions": [
+    { "id": "scl_q1", "text": "Feeling fearful." },
+    { "id": "scl_q2", "text": "Nervousness or shakiness inside." },
+    { "id": "scl_q3", "text": "Feeling blue." },
+    { "id": "scl_q4", "text": "Trouble falling asleep." },
+    { "id": "scl_q5", "text": "Feeling hopeless about the future." },
+    { "id": "scl_q6", "text": "Poor appetite." },
+    { "id": "scl_q7", "text": "Feeling that people are unfriendly or dislike you." },
+    { "id": "scl_q8", "text": "Having to check and double-check what you do." },
+    { "id": "scl_q9", "text": "Thoughts of ending your life." },
+    { "id": "scl_q10", "text": "Feeling uneasy in crowds." }
+  ]
+}

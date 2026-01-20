@@ -1,33 +1,97 @@
+from __future__ import annotations
+
 import uuid
 from datetime import datetime, timezone
+from typing import Dict, Any, Optional
+
 from fastapi import APIRouter, Header, HTTPException
+from pydantic import BaseModel
+
+from app.services.assessment_service import load_assessment, score_assessment
 from app.services.firebase_service import firestore_db, verify_firebase_bearer
-from app.models.assessment import AssessmentIn
+
 
 router = APIRouter(prefix="/assessments", tags=["assessments"])
 
 
-@router.post("")
-async def save_assessment(payload: AssessmentIn, authorization: str = Header(default="")):
+# =========================
+# Pydantic Models
+# =========================
+
+class SubmitAssessmentIn(BaseModel):
+    answers: Dict[str, int]
+    session_id: Optional[str] = None
+
+
+# =========================
+# GET: Questions
+# =========================
+
+@router.get("/questions/{name}")
+def get_questions(name: str) -> Dict[str, Any]:
     """
-    I keep assessments very flexible today.
-    iOS can either compute score locally or send it here.
+    Returns assessment metadata + questions.
+    Used by iOS to render the assessment UI.
+    """
+    try:
+        return load_assessment(name)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
+# =========================
+# POST: Submit Assessment
+# =========================
+
+@router.post("/submit/{name}")
+async def submit_assessment(
+    name: str,
+    payload: SubmitAssessmentIn,
+    authorization: str = Header(default=""),
+):
+    """
+    Backend-authoritative assessment submit.
+
+    Flow:
+    1) Verify Firebase token
+    2) Validate all questions answered
+    3) Compute score & safety flags
+    4) Save to Firestore
     """
 
+    # 🔐 AUTH
     try:
         uid = verify_firebase_bearer(authorization)
     except Exception:
         raise HTTPException(status_code=401, detail="Invalid Firebase token")
 
+    # 🧮 VALIDATE + SCORE (deterministic)
+    result = score_assessment(name, payload.answers)
+
+    # ❌ Validation failed → iOS shows "Please answer all questions"
+    if not result.get("ok"):
+        return result
+
+    # 💾 SAVE TO FIRESTORE
     db = firestore_db()
-    a_id = "as_" + str(uuid.uuid4())
+    assessment_id = "as_" + str(uuid.uuid4())
 
-    db.collection("users").document(uid).collection("assessments").document(a_id).set({
-        "id": a_id,
-        "timestamp": datetime.now(timezone.utc),
-        "kind": payload.kind,
-        "answers": payload.answers,
-        "score": payload.score
-    })
+    db.collection("users") \
+        .document(uid) \
+        .collection("assessments") \
+        .document(assessment_id) \
+        .set({
+            "id": assessment_id,
+            "uid": uid,
+            "kind": name,
+            "answers": payload.answers,
+            "result": result,
+            "session_id": payload.session_id or "default",
+            "timestamp": datetime.now(timezone.utc),
+        })
 
-    return {"assessmentId": a_id, "saved": True}
+    return {
+        "ok": True,
+        "assessmentId": assessment_id,
+        "result": result,
+    }
