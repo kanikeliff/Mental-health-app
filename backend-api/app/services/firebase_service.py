@@ -2,6 +2,13 @@ import json
 import firebase_admin
 from firebase_admin import credentials, firestore, auth as fb_auth
 from pydantic_settings import BaseSettings
+import os
+
+def verify_firebase_bearer(authorization: str) -> str:
+    if os.getenv("DEV_BYPASS_AUTH", "").lower() in ("1", "true", "yes"):
+        return "dev-user"
+    # normal verify devam...
+
 
 # I keep config inside this file to avoid scattering env reads everywhere.
 # If you already have a config file somewhere else, we can move it later.
