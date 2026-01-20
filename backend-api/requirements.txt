@@ -1,2 +1,8 @@
-fastapi==0.104.1
-uvicorn==0.24.0
+fastapi==0.115.0
+uvicorn[standard]==0.30.6
+pydantic-settings==2.5.2
+python-dotenv==1.0.1
+
+# Firebase Admin SDK (this is what lets my backend talk to Firestore as an admin)
+firebase-admin==6.5.0
+google-cloud-firestore==2.16.1
