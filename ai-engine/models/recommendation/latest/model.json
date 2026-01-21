@@ -1,0 +1,23 @@
+{
+  "user_ids": [
+    "u1",
+    "u2"
+  ],
+  "item_ids": [
+    "breathing_exercise",
+    "journaling_prompt",
+    "mindfulness_video"
+  ],
+  "items_title": {
+    "breathing_exercise": "Breathing Exercise",
+    "mindfulness_video": "Mindfulness Video",
+    "journaling_prompt": "Journaling Prompt"
+  },
+  "meta": {
+    "model_type": "IBCF-cosine-user-mean",
+    "trained_at": 1769022438,
+    "num_users": 2,
+    "num_items": 3,
+    "num_ratings": 4
+  }
+}

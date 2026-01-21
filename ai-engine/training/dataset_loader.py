@@ -52,45 +52,83 @@ def load_sample_inputs_json(path: str | Path) -> dict:
 
 
 def load_recommendation_dataset(
-    ratings_csv: Optional[str | Path] = None,
-    items_csv: Optional[str | Path] = None,
-    sample_inputs_json: Optional[str | Path] = None,
+    *,
+    ratings_csv: str | Path | None = None,
+    items_csv: str | Path | None = None,
+    sample_inputs_json: str | Path | None = None,
 ) -> RecDataset:
     """
-    Priority:
-      1) ratings_csv (+optional items_csv)
-      2) sample_inputs_json (expects a 'ratings' list inside)
+    Loads recommendation dataset from either:
+    - CSVs: ratings_csv (+ optional items_csv)
+    - or a JSON sample file: sample_inputs_json
+    JSON can be:
+      1) a dict with "ratings": [...]
+      2) a dict with any list that contains user_id,item_id,rating
+      3) directly a list of dicts: [{user_id,item_id,rating,...}, ...]
     """
 
-    if ratings_csv:
-        ratings = load_ratings_csv(ratings_csv)
-        items = load_items_csv(items_csv) if items_csv else None
-        return RecDataset(ratings=ratings, items=items)
-
+    # ✅ Priority: sample JSON (demo mode)
     if sample_inputs_json:
         obj = load_sample_inputs_json(sample_inputs_json)
 
-        # Expect: {"ratings": [{"user_id":..,"item_id":..,"rating":..,"timestamp":..}, ...], "items":[...]}
-        if "ratings" not in obj or not isinstance(obj["ratings"], list):
-            raise ValueError("sample_inputs.json must include a list field: ratings")
+        # CASE 1: file is directly a list of dicts
+        if isinstance(obj, list):
+            ratings = pd.DataFrame(obj)
 
-        ratings = pd.DataFrame(obj["ratings"])
+        # CASE 2: dict with ratings-like list somewhere
+        elif isinstance(obj, dict):
+            candidate = None
+
+            # Standard key
+            if "ratings" in obj and isinstance(obj["ratings"], list):
+                candidate = obj["ratings"]
+            else:
+                # Search any list of dicts that looks like ratings
+                for k, v in obj.items():
+                    if isinstance(v, list) and v and isinstance(v[0], dict):
+                        keys = set(v[0].keys())
+                        if {"user_id", "item_id", "rating"}.issubset(keys):
+                            candidate = v
+                            break
+
+            if candidate is None:
+                raise ValueError(
+                    "sample_inputs.json does not contain a ratings-like list. "
+                    "Expected a list of dicts containing user_id,item_id,rating."
+                )
+
+            ratings = pd.DataFrame(candidate)
+
+        else:
+            raise ValueError("sample_inputs.json must be a dict or a list")
+
+        # Validate required columns
         for col in ["user_id", "item_id", "rating"]:
             if col not in ratings.columns:
                 raise ValueError(f"sample_inputs.json ratings missing '{col}'")
+
+        # timestamp optional
         if "timestamp" not in ratings.columns:
             ratings["timestamp"] = 0
 
+        # Optional items list
         items = None
-        if "items" in obj and isinstance(obj["items"], list) and len(obj["items"]) > 0:
-            items = pd.DataFrame(obj["items"])
-            if "item_id" not in items.columns:
-                items = None
-            else:
-                if "title" not in items.columns:
-                    items["title"] = items["item_id"].astype(str)
-                items = items[["item_id", "title"]].copy()
+        if isinstance(obj, dict) and "items" in obj and isinstance(obj["items"], list) and obj["items"]:
+            tmp = pd.DataFrame(obj["items"])
+            if "item_id" in tmp.columns:
+                if "title" not in tmp.columns:
+                    tmp["title"] = tmp["item_id"].astype(str)
+                items = tmp[["item_id", "title"]].copy()
 
-        return RecDataset(ratings=ratings[["user_id", "item_id", "rating", "timestamp"]].copy(), items=items)
+        return RecDataset(
+            ratings=ratings[["user_id", "item_id", "rating", "timestamp"]].copy(),
+            items=items,
+        )
 
-    raise ValueError("Provide either ratings_csv or sample_inputs_json")
+    # ✅ Otherwise: CSV mode
+    if not ratings_csv:
+        raise ValueError("You must provide either sample_inputs_json or ratings_csv")
+
+    ratings = load_ratings_csv(ratings_csv)
+    items = load_items_csv(items_csv) if items_csv else None
+    return RecDataset(ratings=ratings, items=items)

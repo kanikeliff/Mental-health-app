@@ -1,1 +1,8 @@
-{"happy": 1, "sad": 2, "neutral": 3}
+{
+  "happy": 0,
+  "sad": 1,
+  "anxious": 2,
+  "angry": 3,
+  "neutral": 4,
+  "stressed": 5
+}
