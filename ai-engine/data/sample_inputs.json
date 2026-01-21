@@ -1,33 +1,15 @@
 {
   "ratings": [
-    {
-      "user_id": "u1",
-      "item_id": "breathing_exercise",
-      "rating": 5
-    },
-    {
-      "user_id": "u1",
-      "item_id": "mindfulness_video",
-      "rating": 4
-    },
-    {
-      "user_id": "u2",
-      "item_id": "breathing_exercise",
-      "rating": 3
-    },
-    {
-      "user_id": "u2",
-      "item_id": "journaling_prompt",
-      "rating": 5
-    }
+    { "user_id": "u1", "item_id": "breathing_exercise", "rating": 5 },
+    { "user_id": "u1", "item_id": "mindfulness_video", "rating": 4 },
+    { "user_id": "u2", "item_id": "breathing_exercise", "rating": 3 },
+    { "user_id": "u2", "item_id": "journaling_prompt", "rating": 5 }
   ],
   "items": [
     { "item_id": "breathing_exercise", "title": "Breathing Exercise" },
     { "item_id": "mindfulness_video", "title": "Mindfulness Video" },
     { "item_id": "journaling_prompt", "title": "Journaling Prompt" }
   ],
-  
-  
   "samples": [
     { "text": "I feel great today", "label": "happy" },
     { "text": "I am feeling very sad", "label": "sad" },
@@ -36,6 +18,4 @@
     { "text": "Nothing special happened today", "label": "neutral" },
     { "text": "I am really angry about what happened", "label": "angry" }
   ]
-
-
 }
