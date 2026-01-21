@@ -1,21 +1,22 @@
 from __future__ import annotations
 
-from typing import Any, Dict, Optional
-
+from typing import Any, Dict, List, Optional
 from pydantic import BaseModel, Field
 
 
-# I keep these schemas super small on purpose.
-# I only define what the API actually uses at runtime.
-
 class ChatIn(BaseModel):
-    # I expect iOS to send the user's message here.
+    # I expect iOS to send the user's message in this field.
     userText: str = Field(..., min_length=1)
+
+    # I keep these optional so the frontend can evolve without breaking the API.
+    conversationId: Optional[str] = None
+    history: Optional[List[Dict[str, str]]] = None
     clientMessageId: Optional[str] = None
 
 
 class ChatOut(BaseModel):
-    # I return the assistant's text back to the client.
+    # I return the assistant's reply here.
     assistantText: str
-    # I keep metadata flexible because AI providers may return extra fields.
-    metadata: Dict[str, Any] = Field(default_factory=dict)
+
+    # I attach extra info for debugging and UI decisions (tags/tone/etc).
+    metadata: Dict[str, Any] = {}
