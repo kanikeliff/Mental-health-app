@@ -1,0 +1,8 @@
+{
+  "k": 5,
+  "num_users": 2,
+  "num_items": 3,
+  "num_test": 2,
+  "HitRate@k": 0.0,
+  "MRR@k": 0.0
+}

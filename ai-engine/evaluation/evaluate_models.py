@@ -6,9 +6,10 @@ import json
 from pathlib import Path
 
 import numpy as np
+import pandas as pd
 
-from training.dataset_loader import load_recommendation_dataset
 from inference.recommendation_logic import IBCFRecommender
+from training.dataset_loader import load_recommendation_dataset
 
 
 def hit_rate_at_k(model: IBCFRecommender, test_rows, k: int) -> float:
@@ -52,25 +53,39 @@ def main():
 
     # leave-one-out: last rating per user as test
     df = ds.ratings.copy()
+
+    # ensure required columns exist
+    for col in ["user_id", "item_id", "rating"]:
+        if col not in df.columns:
+            raise ValueError(f"ratings missing required column: {col}")
+
+    # timestamp optional
+    if "timestamp" not in df.columns:
+        df["timestamp"] = 0
+
     df["timestamp"] = df["timestamp"].astype(float)
     df = df.sort_values(["user_id", "timestamp"], ascending=[True, True])
 
     test_rows = []
     train_parts = []
+
     for u, g in df.groupby("user_id"):
         if len(g) < 2:
             train_parts.append(g)
             continue
+
         test = g.iloc[-1]
         train = g.iloc[:-1]
+
         test_rows.append((str(test["user_id"]), str(test["item_id"])))
         train_parts.append(train)
 
-    train_df = np.concatenate([t.values for t in train_parts], axis=0)
-    train_df = ds.ratings.iloc[:0].append(  # preserve columns
-        [dict(zip(ds.ratings.columns, row)) for row in train_df],
-        ignore_index=True
-    )
+    # ✅ pandas 2.x compatible: concat instead of append
+    if train_parts:
+        train_df = pd.concat(train_parts, ignore_index=True)
+    else:
+        # preserve schema
+        train_df = df.iloc[:0].copy()
 
     model = IBCFRecommender()
     model.fit(train_df, ds.items)
@@ -87,6 +102,7 @@ def main():
     outp = Path(args.out)
     outp.parent.mkdir(parents=True, exist_ok=True)
     outp.write_text(json.dumps(results, indent=2), encoding="utf-8")
+
     print(f"[OK] Wrote: {outp}")
     print(json.dumps(results, indent=2))
 

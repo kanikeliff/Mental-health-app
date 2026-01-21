@@ -15,7 +15,7 @@
   },
   "meta": {
     "model_type": "IBCF-cosine-user-mean",
-    "trained_at": 1769022438,
+    "trained_at": 1769023247,
     "num_users": 2,
     "num_items": 3,
     "num_ratings": 4

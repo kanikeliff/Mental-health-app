@@ -6,7 +6,7 @@ from typing import Optional, List, Dict, Any
 from fastapi import APIRouter, Header, HTTPException
 from app.models.schemas import ChatIn, ChatOut
 from app.services.ai_service import generate_chat_reply
-from app.services.firebase_service import verify_firebase_token
+from app.services.firebase_service import verify_firebase_bearer
 
 
 router = APIRouter(tags=["chat"])
@@ -26,7 +26,7 @@ async def chat(
             raise HTTPException(status_code=401, detail="Missing Authorization header")
 
         token = authorization.split("Bearer ", 1)[1].strip()
-        user_id = verify_firebase_token(token)
+        user_id = verify_firebase_bearer(token)
 
     # I call the AI service with the exact keyword names it expects.
     result: Dict[str, Any] = generate_chat_reply(
