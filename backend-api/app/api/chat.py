@@ -45,7 +45,9 @@ async def chat(payload: ChatIn, authorization: str = Header(default="")):
         user_text=payload.userText,
     )
 
-    assistant_text = result["assistant_reply"]
+    from app.services.ai_service import generate_chat_reply
+    
+    assistant_text = generate_chat_reply(user_text)
     meta = {
         "safety": result.get("safety"),
         "tags": result.get("tags", []),
