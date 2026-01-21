@@ -14,6 +14,8 @@ google-cloud-firestore==2.16.1
 # I might call AI engine via HTTP later, so I add this now and decide later on
 httpx==0.27.0
 
+openai>=1.0.0
+
 fastapi
 uvicorn
 firebase-admin
