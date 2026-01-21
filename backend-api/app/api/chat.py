@@ -1,69 +1,41 @@
-import uuid
-from datetime import datetime, timezone
-
 from fastapi import APIRouter, Header, HTTPException
-from app.services.firebase_service import firestore_db, verify_firebase_bearer
 from app.services.ai_service import generate_chat_reply
-from app.models.chat import ChatIn, ChatOut
+from app.services.firebase_service import verify_firebase_bearer
 
-router = APIRouter(prefix="/chat", tags=["chat"])
+# Bu modeller projende nerede tanımlıysa ona göre import et.
+# Çoğu projede şu ikisinden biri olur:
+# from app.models.schemas import ChatIn, ChatOut
+# from app.schemas import ChatIn, ChatOut
+
+from app.models.schemas import ChatIn, ChatOut  # <-- Eğer bu patlarsa alttaki alternatifi dene
+# from app.schemas import ChatIn, ChatOut
 
 
-@router.post("", response_model=ChatOut)
-async def chat(payload: ChatIn, authorization: str = Header(default="")):
-    """
-    iOS sends Firebase ID token in Authorization header.
-    I validate it and use uid for scoping.
-    """
+router = APIRouter(tags=["chat"])
 
-    # 1) Auth
+
+@router.post("/chat", response_model=ChatOut)
+async def chat(payload: ChatIn, authorization: str = Header(default="")) -> ChatOut:
+    # 1) Auth (Firebase / dev bypass firebase_service içinde)
     try:
         uid = verify_firebase_bearer(authorization)
     except Exception:
-        # I keep it simple: 401 if token invalid.
+        # Render'da Authorization "anything" gönderince 401 gelmesi normal (DEV_BYPASS_AUTH yoksa)
         raise HTTPException(status_code=401, detail="Invalid Firebase token")
 
-    # 2) Firestore collection path matches your iOS plan:
-    # users/{uid}/chat/{messageId}
-    db = firestore_db()
-    chat_box = db.collection("users").document(uid).collection("chat")
+    # 2) AI reply üret
+    try:
+        result = generate_chat_reply(
+            user_text=payload.userText,
+            user_id=uid,
+            client_message_id=payload.clientMessageId,
+        )
+    except Exception as e:
+        # AI provider / env problemi vs. -> 500 ama mesaj anlaşılır olsun
+        raise HTTPException(status_code=500, detail=f"Chat generation failed: {type(e).__name__}")
 
-    # 3) I generate stable-ish ids
-    user_msg_id = payload.clientMessageId or str(uuid.uuid4())
-
-    # 4) Save user message first (I do this so we never lose user input)
-    chat_box.document(user_msg_id).set({
-        "id": user_msg_id,
-        "timestamp": datetime.now(timezone.utc),
-        "role": "user",
-        "content": payload.userText.strip(),
-        "metadata": {}
-    })
-
-    result = generate_chat_reply(
-        user_id=uid,
-        user_text=payload.userText,
+    # 3) Response
+    return ChatOut(
+        assistantText=result.get("assistantText", ""),
+        metadata=result.get("metadata", {}) or {},
     )
-
-    from app.services.ai_service import generate_chat_reply
-    
-    assistant_text = generate_chat_reply(user_text)
-    meta = {
-        "safety": result.get("safety"),
-        "tags": result.get("tags", []),
-        "tone": result.get("tone"),
-        "follow_up_questions": result.get("follow_up_questions", []),
-        "debug": result.get("debug"),
-    }
-
-    # 6) Save assistant message
-    bot_id = str(uuid.uuid4())
-    chat_box.document(bot_id).set({
-        "id": bot_id,
-        "timestamp": datetime.now(timezone.utc),
-        "role": "assistant",
-        "content": assistant_text,
-        "metadata": meta
-    })
-
-    return ChatOut(assistantText=assistant_text, metadata=meta)
