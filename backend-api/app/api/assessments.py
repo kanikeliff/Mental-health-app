@@ -4,11 +4,12 @@ import uuid
 from datetime import datetime, timezone
 from typing import Dict, Any, Optional
 
-from fastapi import APIRouter, Header, HTTPException
+from fastapi import APIRouter, Header, HTTPException, Depends
 from pydantic import BaseModel
 
 from app.services.assessment_service import load_assessment, score_assessment
-from app.services.firebase_service import firestore_db, verify_firebase_bearer
+from app.services.firebase_service import verify_firebase_bearer
+from app.services.firestore_provider import get_firestore
 
 
 router = APIRouter(prefix="/assessments", tags=["assessments"])
@@ -48,6 +49,7 @@ async def submit_assessment(
     name: str,
     payload: SubmitAssessmentIn,
     authorization: str = Header(default=""),
+    db = Depends(get_firestore),
 ):
     """
     Backend-authoritative assessment submit.
@@ -61,7 +63,7 @@ async def submit_assessment(
 
     # 🔐 AUTH
     try:
-        uid = verify_firebase_bearer(authorization)
+        uid = verify_firebase_bearer(authorization)["uid"]
     except Exception:
         raise HTTPException(status_code=401, detail="Invalid Firebase token")
 
@@ -73,7 +75,6 @@ async def submit_assessment(
         return result
 
     # 💾 SAVE TO FIRESTORE
-    db = firestore_db()
     assessment_id = "as_" + str(uuid.uuid4())
 
     db.collection("users") \

@@ -1,15 +1,16 @@
 import uuid
-from datetime import datetime, timezone
-from fastapi import APIRouter, Header, HTTPException
+from datetime import datetime, timezone, timedelta
+from fastapi import APIRouter, Header, HTTPException, Depends
+from app.services.firestore_provider import get_firestore
 
-from app.services.firebase_service import firestore_db, verify_firebase_bearer
+from app.services.firebase_service import verify_firebase_bearer
 from app.services.encryption_service import pack_private_report
 
 router = APIRouter(prefix="/report", tags=["report"])
 
 
 @router.post("")
-async def make_report(authorization: str = Header(default=""), weeks: int = 1):
+async def make_report(authorization: str = Header(default=""), weeks: int = 1, db = Depends(get_firestore)):
     """
     For today:
     - I generate a simple text report.
@@ -17,22 +18,50 @@ async def make_report(authorization: str = Header(default=""), weeks: int = 1):
     """
 
     try:
-        uid = verify_firebase_bearer(authorization)
+        uid = verify_firebase_bearer(authorization)["uid"]
     except Exception:
         raise HTTPException(status_code=401, detail="Invalid Firebase token")
 
-    db = firestore_db()
+    if not 1 <= weeks <= 52:
+        raise HTTPException(
+            status_code=422,
+            detail="weeks must be between 1 and 52",
+        )
+
+    now = datetime.now(timezone.utc)
+    cutoff = now - timedelta(weeks=weeks)
+
     moods = db.collection("users").document(uid).collection("moods").stream()
 
     scores = []
     for m in moods:
         d = m.to_dict() or {}
-        if d.get("moodScore") is None:
+
+        timestamp = d.get("timestamp")
+        if not isinstance(timestamp, datetime):
             continue
+
+        if timestamp.tzinfo is None:
+            timestamp = timestamp.replace(tzinfo=timezone.utc)
+
+        timestamp = timestamp.astimezone(timezone.utc)
+
+        if not cutoff <= timestamp <= now:
+            continue
+
+        score = d.get("moodScore")
+        if isinstance(score, bool):
+            continue
+
         try:
-            scores.append(int(d["moodScore"]))
-        except Exception:
-            pass
+            score = int(score)
+        except (TypeError, ValueError, OverflowError):
+            continue
+
+        if not 1 <= score <= 5:
+            continue
+
+        scores.append(score)
 
     avg = round(sum(scores) / len(scores), 2) if scores else None
 

@@ -5,7 +5,7 @@ import time
 from pathlib import Path
 from typing import Dict, Any, List, Tuple
 
-ASSESS_DIR = Path(__file__).resolve().parents[1] / "data" / "assessments"
+ASSESS_DIR = Path(__file__).resolve().parents[2] / "data" / "assessment"
 
 SUPPORTED = {
     "phq9": "phq9.json",

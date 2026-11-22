@@ -1,21 +1,22 @@
 from datetime import datetime, timezone, timedelta
 from zoneinfo import ZoneInfo
-from fastapi import APIRouter, Header, HTTPException
+from fastapi import APIRouter, Header, HTTPException, Depends
+from app.services.firestore_provider import get_firestore
 
-from app.services.firebase_service import firestore_db, verify_firebase_bearer, env_timezone
+from app.services.firebase_service import verify_firebase_bearer, env_timezone
 
 router = APIRouter(prefix="/mood", tags=["mood"])
 
 
 @router.get("/weekly")
-async def weekly_insights(authorization: str = Header(default=""), weeks: int = 1):
+async def weekly_insights(authorization: str = Header(default=""), weeks: int = 1, db = Depends(get_firestore)):
     """
     I compute weekly mood stats from Firestore moods.
     Path: users/{uid}/moods/{moodDocId}
     """
 
     try:
-        uid = verify_firebase_bearer(authorization)
+        uid = verify_firebase_bearer(authorization)["uid"]
     except Exception:
         raise HTTPException(status_code=401, detail="Invalid Firebase token")
 
@@ -27,7 +28,6 @@ async def weekly_insights(authorization: str = Header(default=""), weeks: int = 
     start = start - timedelta(days=7 * (weeks - 1))
     end = start + timedelta(days=7 * weeks)
 
-    db = firestore_db()
     moods = db.collection("users").document(uid).collection("moods").stream()
 
     scores = []
@@ -40,7 +40,9 @@ async def weekly_insights(authorization: str = Header(default=""), weeks: int = 
         if not ts or score is None:
             continue
 
-        ts_local = ts.replace(tzinfo=timezone.utc).astimezone(tz)
+        if ts.tzinfo is None:
+            ts = ts.replace(tzinfo=timezone.utc)
+        ts_local = ts.astimezone(tz)
         if not (start <= ts_local < end):
             continue
 

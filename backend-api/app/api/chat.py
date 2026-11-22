@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-import os
-from typing import Optional, List, Dict, Any
+from typing import Optional, Dict, Any
 
 from fastapi import APIRouter, Header, HTTPException
 from app.models.schemas import ChatIn, ChatOut
@@ -17,16 +16,13 @@ async def chat(
     payload: ChatIn,
     authorization: Optional[str] = Header(default=None),
 ) -> ChatOut:
-    # I allow a dev bypass so I can hit /chat with curl without Firebase.
-    dev_bypass = os.getenv("DEV_AUTH_BYPASS", "false").lower() == "true"
+    try:
+        user_id = verify_firebase_bearer(authorization)["uid"]
+    except Exception as exc:
+        raise HTTPException(status_code=401, detail="Invalid Firebase token") from exc
 
-    user_id = "dev-user"
-    if not dev_bypass:
-        if not authorization or not authorization.startswith("Bearer "):
-            raise HTTPException(status_code=401, detail="Missing Authorization header")
-
-        token = authorization.split("Bearer ", 1)[1].strip()
-        user_id = verify_firebase_bearer(token)
+    if not isinstance(user_id, str) or not user_id:
+        raise HTTPException(status_code=401, detail="Invalid Firebase token")
 
     # I call the AI service with the exact keyword names it expects.
     result: Dict[str, Any] = generate_chat_reply(

@@ -4,6 +4,8 @@ from __future__ import annotations
 import os
 from typing import Any, Dict, Optional
 
+from app.firebase_admin_box import firestore_bag, get_firebase_app
+
 # I make Firebase optional so the service can boot on Render even if credentials are missing.
 # If DEV_AUTH_BYPASS=true, I skip verification and DB entirely.
 
@@ -28,15 +30,9 @@ def verify_firebase_bearer(auth_header: Optional[str]) -> Dict[str, Any]:
     if not token:
         raise ValueError("Missing Bearer token")
 
-    # I import firebase lazily so import-time never crashes.
-    import firebase_admin
     from firebase_admin import auth
 
-    if not firebase_admin._apps:
-        # I expect GOOGLE_APPLICATION_CREDENTIALS or other Firebase default creds in prod.
-        firebase_admin.initialize_app()
-
-    decoded = auth.verify_id_token(token)
+    decoded = auth.verify_id_token(token, app=get_firebase_app())
     # I normalize the payload a bit for my app.
     return {
         "uid": decoded.get("uid") or decoded.get("sub"),
@@ -63,13 +59,7 @@ def init_firestore_if_possible() -> None:
         return
 
     try:
-        import firebase_admin
-        from firebase_admin import firestore
-
-        if not firebase_admin._apps:
-            firebase_admin.initialize_app()
-
-        firestore_db = firestore.client()
+        firestore_db = firestore_bag()
     except Exception:
         # I keep firestore_db as None if Firestore is not configured.
         firestore_db = None
